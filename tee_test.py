@@ -5,10 +5,7 @@ from bs4 import BeautifulSoup
 import json
 from pathlib import Path
 
-
 from datetime import date, timedelta
-
-
 
 # next 10 days
 # for each day
@@ -28,42 +25,45 @@ from datetime import date, timedelta
 courses = [
     {
         "name": "Langara",
-         "url_to_date": "https://secure.west.prophetservices.com/CityofVancouver/Home/nIndex?CourseId=1&Date=",
-         "url_after_date_to_players": "&Time=AnyTime&Player=99&Hole=18",
-         "outer_wrapper_selector": "div.divBoxText",
-         "tee_time_selector": "span",
-         "num_players_code": None
-     },
+        "url_to_date": "https://secure.west.prophetservices.com/CityofVancouver/Home/nIndex?CourseId=1&Date=",
+        "url_after_date_to_players": "&Time=AnyTime&Player=99&Hole=18",
+        "outer_wrapper_selector": "div.divBoxText",
+        "tee_time_selector": "span",
+        "test_path": "test_files/langara.html",
+        "num_players_code": None
+    },
     {
         "name": "Fraserview",
-         "url_to_date": "https://secure.west.prophetservices.com/CityofVancouver/Home/nIndex?CourseId=2&Date=",
-         "url_after_date_to_players": "&Time=AnyTime&Player=99&Hole=18",
-         "outer_wrapper_selector": "div.divBoxText",
-         "tee_time_selector": "span",
-         "num_players_code": None
+        "url_to_date": "https://secure.west.prophetservices.com/CityofVancouver/Home/nIndex?CourseId=2&Date=",
+        "url_after_date_to_players": "&Time=AnyTime&Player=99&Hole=18",
+        "outer_wrapper_selector": "div.divBoxText",
+        "tee_time_selector": "span",
+        "test_path": "test_files/langara.html",
+        "num_players_code": None
 
     },
     {
-         "name": "McCleery",
-         "url_to_date": "https://secure.west.prophetservices.com/CityofVancouver/Home/nIndex?CourseId=3&Date=",
-         "url_after_date_to_players": "&Time=AnyTime&Player=99&Hole=18",
-         "outer_wrapper_selector": "div.divBoxText",
-         "tee_time_selector": "span",
-         "num_players_code": None
+        "name": "McCleery",
+        "url_to_date": "https://secure.west.prophetservices.com/CityofVancouver/Home/nIndex?CourseId=3&Date=",
+        "url_after_date_to_players": "&Time=AnyTime&Player=99&Hole=18",
+        "outer_wrapper_selector": "div.divBoxText",
+        "tee_time_selector": "span",
+        "test_path": "test_files/langara.html",
+        "num_players_code": None
 
     },
     {
-         "name": "Burnaby Mtn",
-         "url_to_date": "https://city-of-burnaby-golf.book.teeitup.com/?course=17605&date=",
-         "url_after_date_to_players": "",
-         "outer_wrapper_selector": "body#app-body div#app-container  div.jss123",
-         "tee_time_selector": "p",
-         "num_players_code": None
+        "name": "Burnaby Mtn",
+        "url_to_date": "https://city-of-burnaby-golf.book.teeitup.com/?course=17605&date=",
+        "url_after_date_to_players": "",
+        "outer_wrapper_selector": "body#app-body div#app-container  div.jss123",
+        "tee_time_selector": "p",
+        "test_path": "test_files/bby_mtn.html",
+        "num_players_code": None
     }
 
 ]
-# "Burnaby Mountain GC", "https://city-of-burnaby-golf.book.teeitup.com/?course=17605&date=", "",
-#                  "div", "jss123", "p")
+
 
 class Course:
     # name: str
@@ -72,12 +72,13 @@ class Course:
     # num_players_code: int
 
     def __init__(self, name, url_to_date, url_after_date_to_players,
-                 outer_wrapper_selector, tee_time_selector, num_players_code=None):
+                 outer_wrapper_selector, tee_time_selector, test_path, num_players_code=None):
         self.name = name
         self.url_to_date = url_to_date
         self.url_after_date_to_players = url_after_date_to_players
         self.outer_wrapper_selector = outer_wrapper_selector
         self.tee_time_selector = tee_time_selector
+        self.test_path = test_path
         self.num_players_code = num_players_code
 
     # url constructor
@@ -101,11 +102,10 @@ class Course:
         return players_str[:-1]
 
 
-
 class Booking:
     course: Course
 
-    def __init__(self, course_name, players, date_of_play):
+    def __init__(self, course_name: str, players: int, date_of_play: str):
         self.course_name = course_name
         self.players = players
         # self.time_selection = time_selection
@@ -121,13 +121,13 @@ class Booking:
             this_course["url_after_date_to_players"],
             this_course["outer_wrapper_selector"],
             this_course["tee_time_selector"],
+            this_course["test_path"],
             this_course["num_players_code"]
         )
         return course
 
     def get_url(self):
         return self.course.construct_url(self.date_of_play, self.players)
-
 
     def find_times(self):
         url = self.get_url()
@@ -149,14 +149,13 @@ class Booking:
             times.append(t.select_one(self.course.tee_time_selector).text)
         return times
 
-
-    def test_find_times(self, path):
+    def test_find_times(self):
 
         # url = path
         # page =open(url)
         # soup = BeautifulSoup(page.read(), "html.parser")
 
-        with open(path) as fp:
+        with open(self.course.test_path) as fp:
             soup = BeautifulSoup(fp, "html.parser")
 
         full_tee_times = soup.select(self.course.outer_wrapper_selector)
@@ -168,6 +167,44 @@ class Booking:
         return times
 
 
+# Takes a list of courses that you want to search
+# It takes a list of the day/s that you want to search
+# It scrapes the appropriate sites and fetches the data
+# It prints the formatted output
+
+
+class Search:
+
+    def __init__(self, course_list: [], dates: [], players=2):
+        self.course_list = course_list
+        self.dates = dates
+        self.players = players
+
+    def get_times_for_course(self, course, date) -> []:
+        booking = Booking(course, self.players, date)
+        return booking.find_times()
+
+    def get_all_times_for_all_courses_on_all_dates(self):
+        # June 3: Langara(12:10, 12:15, 1:45), Fraserview(8:37, 14:52)
+        # [{dates: [{course: [times]}]}]
+        these_dates = []
+        for d in self.dates:
+            courses = []
+            these_dates.append({d: courses})
+            for c in self.course_list:
+                times = self.get_times_for_course(c, d)
+                courses.append({c: times})
+        return these_dates
+
+
+# Returns formatted text
+
+
+class Formatter:
+    def __init__(self):
+        pass
+
+
 #             time = t.find(class_="timeDiv").find('span').text
 #             location = t.find('p').text
 #             # print(time + " at " + location)
@@ -176,14 +213,18 @@ base_path = Path(__file__).parent
 bby_file_path = (base_path / "test_files/bby_mtn.html").resolve()
 langara_file_path = (base_path / "test_files/langara.html").resolve()
 
+test = Search(["Langara", "Fraserview"],["2022-09-05", "2022-09-06"])
+print(test.get_all_times_for_all_courses_on_all_dates())
+
+
 book = Booking("Burnaby Mtn", 3, "2022-09-05")
 print(book.get_url())
-print(book.test_find_times(bby_file_path))
+print(book.test_find_times())
 
-book = Booking("Langara", 2, "2022-09-05")
-print(book.get_url())
-# print(book.test_find_times(langara_file_path))
-print(book.find_times())
+# book = Booking("Langara", 2, "2022-09-05")
+# print(book.get_url())
+# # print(book.test_find_times(langara_file_path))
+# print(book.find_times())
 
 # ---------------IP has been blocked!!!------------------
 # accidentally used van golf tags
@@ -192,21 +233,19 @@ print(book.find_times())
 # print(book.find_times())
 
 
-
-
 # https://www.chronogolf.ca/club/university-golf-club#?date=2022-09-05&course_id=525&nb_holes=18&affiliation_type_ids=2897,2897
 # class="widget-teetimes"
 # <div class="widget-teetime-tag ng-binding" ng-class="{ active : vm.teetime.id == vm.selectedTeetime.id }">
 #     6:40 PM
 #   </div>
-#uni = Course("University Golf", "https://www.chronogolf.ca/club/university-golf-club#?date=",
-        #     "&course_id=525&nb_holes=18&affiliation_type_ids=", 2897)
+# uni = Course("University Golf", "https://www.chronogolf.ca/club/university-golf-club#?date=",
+#     "&course_id=525&nb_holes=18&affiliation_type_ids=", 2897)
 
 # print(bby_mtn.name)
 # print(bby_mtn.url_after_date_to_players)
 # print(bby_mtn.construct_url("2022-09-05", 3))
 
-#print(uni.construct_url("2022-09-05", 3))
+# print(uni.construct_url("2022-09-05", 3))
 
 #
 # def good_times(times):
@@ -273,4 +312,3 @@ print(book.find_times())
 #
 #
 #     i += 1
-

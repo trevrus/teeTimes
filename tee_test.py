@@ -64,6 +64,14 @@ courses = [
 
 ]
 
+course_groups = {
+
+        "city":     ["Langara", "Fraserview", "McCleery"],
+        "GVRD":     ["Burnaby Mtn", "Riverway", "University", "Greenacres", "Westwood", "Langara", "Fraserview", "McCleery"],
+        "valley":   ["Redwoods", "Belmont", "Fort Langley", "Hazelmere", "Swaneset", "Northview"],
+        "wcgg":     ["Belmont", "Hazelmere", "Swaneset"]
+    }
+
 
 class Course:
     # name: str
@@ -142,7 +150,7 @@ class Booking:
 
         response = requests.get(url, proxies=proxies, headers=headers)
         soup = BeautifulSoup(response.text, "html.parser")
-        print(self.course)
+        # print(self.course)
         full_tee_times = soup.select(self.course.outer_wrapper_selector)
         times = []
         for t in full_tee_times:
@@ -184,7 +192,7 @@ class Search:
         booking = Booking(course, self.players, date)
         return booking.find_times()
 
-    def get_all_times_for_all_courses_on_all_dates(self):
+    def all_times_for_all_courses_on_all_dates(self):
         # June 3: Langara(12:10, 12:15, 1:45), Fraserview(8:37, 14:52)
         # [{dates: [{course: [times]}]}]
         these_dates = []
@@ -195,6 +203,19 @@ class Search:
                 times = self.get_times_for_course(c, d)
                 courses.append({c: times})
         return these_dates
+
+    def course_group(self, group: str, dates):
+        pass
+
+    def course_group_this_saturday(self, group):
+        pass
+
+    def all_courses_this_saturday(self):
+        pass
+
+    def next_5_saturdays(self):
+        pass
+
 
 
 # Returns formatted text
@@ -214,12 +235,12 @@ bby_file_path = (base_path / "test_files/bby_mtn.html").resolve()
 langara_file_path = (base_path / "test_files/langara.html").resolve()
 
 test = Search(["Langara", "Fraserview"],["2022-09-05", "2022-09-06"])
-print(test.get_all_times_for_all_courses_on_all_dates())
+print(test.all_times_for_all_courses_on_all_dates())
+print(course_groups["city"])
 
-
-book = Booking("Burnaby Mtn", 3, "2022-09-05")
-print(book.get_url())
-print(book.test_find_times())
+# book = Booking("Burnaby Mtn", 3, "2022-09-05")
+# print(book.get_url())
+# print(book.test_find_times())
 
 # book = Booking("Langara", 2, "2022-09-05")
 # print(book.get_url())

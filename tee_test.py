@@ -18,8 +18,6 @@ from datetime import date, timedelta
 #
 # be able to select desired date and list all times at all courses
 
-# https://city-of-burnaby-golf.book.teeitup.com/?course=17605&date=2022-09-03
-# https://city-of-burnaby-golf.book.teeitup.com/?course=17605,17604&date=2022-09-03
 # today_str = str(date.today())
 
 # items needed for each course:
@@ -32,8 +30,6 @@ courses = [
         "name": "Langara",
          "url_to_date": "https://secure.west.prophetservices.com/CityofVancouver/Home/nIndex?CourseId=1&Date=",
          "url_after_date_to_players": "&Time=AnyTime&Player=99&Hole=18",
-         # "outer_wrapper_tag": "div",
-         # "outer_wrapper_class": "divBoxText",
          "outer_wrapper_selector": "div.divBoxText",
          "tee_time_selector": "span",
          "num_players_code": None
@@ -42,9 +38,8 @@ courses = [
         "name": "Fraserview",
          "url_to_date": "https://secure.west.prophetservices.com/CityofVancouver/Home/nIndex?CourseId=2&Date=",
          "url_after_date_to_players": "&Time=AnyTime&Player=99&Hole=18",
-         "outer_wrapper_tag": "div",
-         "outer_wrapper_class": "divBoxText",
-         "inner_wrapper": "span",
+         "outer_wrapper_selector": "div.divBoxText",
+         "tee_time_selector": "span",
          "num_players_code": None
 
     },
@@ -52,9 +47,8 @@ courses = [
          "name": "McCleery",
          "url_to_date": "https://secure.west.prophetservices.com/CityofVancouver/Home/nIndex?CourseId=3&Date=",
          "url_after_date_to_players": "&Time=AnyTime&Player=99&Hole=18",
-         "outer_wrapper_tag": "div",
-         "outer_wrapper_class": "divBoxText",
-         "inner_wrapper": "span",
+         "outer_wrapper_selector": "div.divBoxText",
+         "tee_time_selector": "span",
          "num_players_code": None
 
     },
@@ -86,17 +80,6 @@ class Course:
         self.tee_time_selector = tee_time_selector
         self.num_players_code = num_players_code
 
-    # def __init__(self, name):
-    #     self.name = name
-    #     this_course = next(item for item in courses if item["name"] == self.name)
-    #
-    #     self.url_to_date = this_course["url_to_date"]
-    #     self.url_after_date_to_players = this_course["url_after_date_to_players"]
-    #     self.outer_wrapper_tag = this_course["outer_wrapper_tag"]
-    #     self.outer_wrapper_class = this_course["outer_wrapper_class"]
-    #     self.inner_wrapper = this_course["inner_wrapper"]
-    #     self.num_players_code = this_course["num_players_code"]
-
     # url constructor
     def construct_url(self, date, num_players):
         full_url: str = self.url_to_date + date + self.url_after_date_to_players
@@ -107,6 +90,7 @@ class Course:
             full_url += self.format_players(num_players)
         return full_url
 
+    # Format the url query string based on number of players; repeats a code(num_players_code) x times
     def format_players(self, num_players):
         code = str(self.num_players_code)
         players_str = ""
@@ -120,16 +104,13 @@ class Course:
 
 class Booking:
     course: Course
-    players: int
 
     def __init__(self, course_name, players, date_of_play):
         self.course_name = course_name
         self.players = players
         # self.time_selection = time_selection
         self.date_of_play = date_of_play
-
         self.course = self.new_course()
-        print(self.course)
 
     def new_course(self):
         this_course = next(item for item in courses if item["name"] == self.course_name)
@@ -178,17 +159,13 @@ class Booking:
         with open(path) as fp:
             soup = BeautifulSoup(fp, "html.parser")
 
-        print(self.course.name)
         full_tee_times = soup.select(self.course.outer_wrapper_selector)
 
         times = []
         for t in full_tee_times:
-            # times.append(t.find('p').text)
             times.append(t.select_one(self.course.tee_time_selector).text)
         print(len(times))
         return times
-
-    # for t in fullTeeTimes:
 
 
 #             time = t.find(class_="timeDiv").find('span').text

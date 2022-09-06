@@ -253,7 +253,20 @@ class Formatter:
         self.results = search
 
     def for_console(self):
-        pass
+        first_date = self.results[0]
+        print("First date:", first_date)
+
+        iso_date = list(first_date.keys())
+        date_str = iso_date[0]
+        print(date_str)
+        courses = list(first_date.values())
+        print(courses[0][0])
+        key = courses[0][0].keys()
+        print(key)
+        print(courses[0][0].keys())
+
+        # date_key = list(self.results[0].values())
+
 #             time = t.find(class_="timeDiv").find('span').text
 #             location = t.find('p').text
 #             # print(time + " at " + location)
@@ -268,7 +281,9 @@ print(course_groups["city"])
 print(search.this_saturday())
 print(search.next_n_saturdays(5))
 # print(search.course_group_times("city", ["2022-09-11"]))
-print(search.all_times_for_courses_on_dates(["McCleery"], ["2022-09-09", "2022-09-23"]))
+result = search.all_times_for_courses_on_dates(["McCleery"], ["2022-09-09", "2022-09-23"])
+format = Formatter(result)
+print(format.for_console())
 
 # book = Booking("Burnaby Mtn", 3, "2022-09-05")
 # print(book.get_url())

@@ -147,14 +147,14 @@ class Booking:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Encoding": "gzip, deflate, br",
             "Accept-Language": "en-CA,en-US;q=0.9,en;q=0.8",
-            "Host": "httpbin.org",
             "Referer": "https: // www.google.com /",
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.6.1 Safari/605.1.15",
             "X-Amzn-Trace-Id": "Root=1-6316ba40-43cb593b411688715f5a55de"
             }
-
+        print(url)
         response = requests.get(url, proxies=proxies, headers=headers)
         soup = BeautifulSoup(response.text, "html.parser")
+        # print(soup)
         full_tee_times = soup.select(self.course.outer_wrapper_selector)
         times = []
         for t in full_tee_times:
@@ -190,7 +190,7 @@ class Search:
     def __init__(self, players=2):
         self.players = players
 
-    def get_times_for_course(self, course, date) -> []:
+    def _get_times_for_course(self, course, date) -> []:
         if date is not str:
             date = str(date)
         booking = Booking(course, self.players, date)
@@ -204,7 +204,7 @@ class Search:
             courses = []
             these_dates.append({d: courses})
             for c in course_list:
-                times = self.get_times_for_course(c, d)
+                times = self._get_times_for_course(c, d)
                 courses.append({c: times})
         return these_dates
 
@@ -243,12 +243,17 @@ class Search:
 
 # Returns formatted text
 
-
+# [{'2022-09-11': [{'Langara': ['16:54', '17:03', '17:12', '17:21', '17:30', '17:39', '17:48', '17:57', '18:06', '18:15', '18:24', '18:33', '18:42', '18:51', '19:00', '19:09', '']},
+#                    {'Fraserview': ['17:21', '17:30', '17:57', '18:06', '18:15', '18:24', '18:33', '19:00', '19:09', '']},
+#                    {'McCleery': ['17:12', '17:21', '17:30', '17:39', '17:48', '17:57', '18:06', '18:15', '18:24', '18:33', '18:42', '18:51', '19:00', '19:09', '']}
+#                    ]}]
+#
 class Formatter:
     def __init__(self, search):
         self.results = search
 
-
+    def for_console(self):
+        pass
 #             time = t.find(class_="timeDiv").find('span').text
 #             location = t.find('p').text
 #             # print(time + " at " + location)
@@ -262,7 +267,8 @@ search = Search()
 print(course_groups["city"])
 print(search.this_saturday())
 print(search.next_n_saturdays(5))
-print(search.course_group_times_this_saturday("city"))
+# print(search.course_group_times("city", ["2022-09-11"]))
+print(search.all_times_for_courses_on_dates(["McCleery"], ["2022-09-09", "2022-09-23"]))
 
 # book = Booking("Burnaby Mtn", 3, "2022-09-05")
 # print(book.get_url())

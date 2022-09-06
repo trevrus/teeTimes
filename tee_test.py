@@ -117,7 +117,7 @@ class Booking:
         # self.time_selection = time_selection
         self.date_of_play = date_of_play
         self.course = self.new_course()
-
+        self.tee_times = []
     def new_course(self):
         this_course = next(item for item in courses if item["name"] == self.course_name)
 
@@ -158,8 +158,8 @@ class Booking:
         full_tee_times = soup.select(self.course.outer_wrapper_selector)
         times = []
         for t in full_tee_times:
-            times.append(t.select_one(self.course.tee_time_selector).text)
-        return times
+            self.tee_times.append(t.select_one(self.course.tee_time_selector).text)
+        return self
 
     def test_find_times(self):
 
@@ -199,14 +199,25 @@ class Search:
     def all_times_for_courses_on_dates(self, course_list: [], dates: []):
         # June 3: Langara(12:10, 12:15, 1:45), Fraserview(8:37, 14:52)
         # [{dates: [{course: [times]}]}]
-        these_dates = []
+        these_dates_tee_times = []
+        # for d in dates:
+        #     courses = []
+        #     these_dates.append({d: courses})
+        #     for c in course_list:
+        #         times = self._get_times_for_course(c, d)
+        #         courses.append({c: times})
+        # return these_dates
+        # [{date: [Booking()]}]
         for d in dates:
-            courses = []
-            these_dates.append({d: courses})
+            bookings = []
+            these_dates_tee_times.append({d: bookings})
             for c in course_list:
-                times = self._get_times_for_course(c, d)
-                courses.append({c: times})
-        return these_dates
+                booking = self._get_times_for_course(c, d)
+                bookings.append(booking)
+        return these_dates_tee_times
+
+
+
 
     def course_group_times(self, group: str, dates):
         search_group = course_groups[group]
@@ -253,45 +264,48 @@ class Formatter:
         self.results = search
 
     def for_console(self):
-        first_date = self.results[0]
-        print("First date:", first_date)
+        results = self.results
+        for r in results:
+            [this_date] = list(r.keys())
+            print()
+            print(this_date)
+            [these_bookings] = list(r.values())
+            for b in these_bookings:
+                print(b.course_name)
+                print(', '.join(b.tee_times))
+        # print(these_dates)
+        # print(these_bookings)
 
-        iso_date = list(first_date.keys())
-        date_str = iso_date[0]
-        print(date_str)
-        courses = list(first_date.values())
-        print(courses[0][0])
-        key = courses[0][0].keys()
-        print(key)
-        print(courses[0][0].keys())
 
-        # date_key = list(self.results[0].values())
-
-#             time = t.find(class_="timeDiv").find('span').text
-#             location = t.find('p').text
-#             # print(time + " at " + location)
 
 base_path = Path(__file__).parent
 bby_file_path = (base_path / "test_files/bby_mtn.html").resolve()
 langara_file_path = (base_path / "test_files/langara.html").resolve()
 
 search = Search()
-# print(search.course_group_times("city", ["2022-09-05", "2022-09-06"]))
-print(course_groups["city"])
-print(search.this_saturday())
-print(search.next_n_saturdays(5))
-# print(search.course_group_times("city", ["2022-09-11"]))
-result = search.all_times_for_courses_on_dates(["McCleery"], ["2022-09-09", "2022-09-23"])
-format = Formatter(result)
+this_search = search.course_group_times("city", ["2022-09-09", "2022-09-10"])
+format = Formatter(this_search)
 print(format.for_console())
+# print(search.course_group_times("city", ["2022-09-05", "2022-09-06"]))
+# print(course_groups["city"])
+# print(search.this_saturday())
+# print(search.next_n_saturdays(5))
+# # print(search.course_group_times("city", ["2022-09-11"]))
+# result = search.all_times_for_courses_on_dates(["McCleery"], ["2022-09-09", "2022-09-23"])
+# format = Formatter(result)
+# print(format.for_console())
 
 # book = Booking("Burnaby Mtn", 3, "2022-09-05")
 # print(book.get_url())
 # print(book.test_find_times())
 
-# book = Booking("Langara", 2, "2022-09-05")
+# book = Booking("Langara", 2, "2022-09-09")
 # print(book.get_url())
-# # print(book.test_find_times(langara_file_path))
+# print(book.find_times())
+# print(book.tee_times)
+# print(book.date_of_play)
+# print(book.course)
+# print(book.course_name)
 # print(book.find_times())
 
 # ---------------IP has been blocked!!!------------------

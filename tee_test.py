@@ -93,9 +93,7 @@ class Course:
     def construct_url(self, date, num_players):
         full_url: str = self.url_to_date + date + self.url_after_date_to_players
         # players_code = ""
-        if self.num_players_code is None:
-            print("no num_players_code")
-        else:
+        if self.num_players_code is not None:
             full_url += self.format_players(num_players)
         return full_url
 
@@ -142,15 +140,21 @@ class Booking:
         # trying to not be detected as a bot
         # set up a proxy
         # find on https://free-proxy-list.net
-        proxies = {'http': 'http://208.113.134.223'}
+        proxies = {'http': '130.41.55.190'}
 
         # set up user agent headers
         headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.6.1 Safari/605.1.15"}
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": "en-CA,en-US;q=0.9,en;q=0.8",
+            "Host": "httpbin.org",
+            "Referer": "https: // www.google.com /",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.6.1 Safari/605.1.15",
+            "X-Amzn-Trace-Id": "Root=1-6316ba40-43cb593b411688715f5a55de"
+            }
 
         response = requests.get(url, proxies=proxies, headers=headers)
         soup = BeautifulSoup(response.text, "html.parser")
-        # print(self.course)
         full_tee_times = soup.select(self.course.outer_wrapper_selector)
         times = []
         for t in full_tee_times:
@@ -183,38 +187,57 @@ class Booking:
 
 class Search:
 
-    def __init__(self, course_list: [], dates: [], players=2):
-        self.course_list = course_list
-        self.dates = dates
+    def __init__(self, players=2):
         self.players = players
 
     def get_times_for_course(self, course, date) -> []:
+        if date is not str:
+            date = str(date)
         booking = Booking(course, self.players, date)
         return booking.find_times()
 
-    def all_times_for_all_courses_on_all_dates(self):
+    def all_times_for_courses_on_dates(self, course_list: [], dates: []):
         # June 3: Langara(12:10, 12:15, 1:45), Fraserview(8:37, 14:52)
         # [{dates: [{course: [times]}]}]
         these_dates = []
-        for d in self.dates:
+        for d in dates:
             courses = []
             these_dates.append({d: courses})
-            for c in self.course_list:
+            for c in course_list:
                 times = self.get_times_for_course(c, d)
                 courses.append({c: times})
         return these_dates
 
-    def course_group(self, group: str, dates):
-        pass
+    def course_group_times(self, group: str, dates):
+        search_group = course_groups[group]
+        return self.all_times_for_courses_on_dates(search_group, dates)
 
-    def course_group_this_saturday(self, group):
-        pass
+    def course_group_times_this_saturday(self, group):
+        return self.course_group_times(group, [self.this_saturday()])
 
-    def all_courses_this_saturday(self):
-        pass
+    def all_courses_times_this_saturday(self):
+        return self.all_times_for_courses_on_dates(courses, [self.this_saturday()])
 
-    def next_5_saturdays(self):
-        pass
+    def this_saturday(self):
+        this_saturday = None
+        i = 0
+        while i < 8:
+            today = date.today()
+            current_day: date = today + timedelta(i)
+            if datetime.datetime.weekday(current_day) == 5:
+                this_saturday = current_day
+                break
+            i += 1
+        return this_saturday
+
+    def next_n_saturdays(self, n):
+        saturdays = []
+        this_saturday = self.this_saturday()
+        for s in range(n):
+            next_saturday = this_saturday + timedelta(s * 7)
+            saturdays.append(next_saturday)
+        return saturdays
+
 
 
 
@@ -222,8 +245,8 @@ class Search:
 
 
 class Formatter:
-    def __init__(self):
-        pass
+    def __init__(self, search):
+        self.results = search
 
 
 #             time = t.find(class_="timeDiv").find('span').text
@@ -234,9 +257,12 @@ base_path = Path(__file__).parent
 bby_file_path = (base_path / "test_files/bby_mtn.html").resolve()
 langara_file_path = (base_path / "test_files/langara.html").resolve()
 
-test = Search(["Langara", "Fraserview"],["2022-09-05", "2022-09-06"])
-print(test.all_times_for_all_courses_on_all_dates())
+search = Search()
+# print(search.course_group_times("city", ["2022-09-05", "2022-09-06"]))
 print(course_groups["city"])
+print(search.this_saturday())
+print(search.next_n_saturdays(5))
+print(search.course_group_times_this_saturday("city"))
 
 # book = Booking("Burnaby Mtn", 3, "2022-09-05")
 # print(book.get_url())

@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 import json
 from pathlib import Path
 
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 # next 10 days
 # for each day
@@ -30,6 +30,7 @@ courses = [
         "outer_wrapper_selector": "div.divBoxText",
         "tee_time_selector": "span",
         "test_path": "test_files/langara.html",
+        "max_advance": 30,
         "num_players_code": None
     },
     {
@@ -39,6 +40,7 @@ courses = [
         "outer_wrapper_selector": "div.divBoxText",
         "tee_time_selector": "span",
         "test_path": "test_files/langara.html",
+        "max_advance": 30,
         "num_players_code": None
 
     },
@@ -49,6 +51,7 @@ courses = [
         "outer_wrapper_selector": "div.divBoxText",
         "tee_time_selector": "span",
         "test_path": "test_files/langara.html",
+        "max_advance": 30,
         "num_players_code": None
 
     },
@@ -59,6 +62,7 @@ courses = [
         "outer_wrapper_selector": "body#app-body div#app-container  div.jss123",
         "tee_time_selector": "p",
         "test_path": "test_files/bby_mtn.html",
+        "max_advance": 3,
         "num_players_code": None
     }
 
@@ -72,6 +76,8 @@ course_groups = {
         "wcgg":     ["Belmont", "Hazelmere", "Swaneset"]
     }
 
+weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
 
 class Course:
     # name: str
@@ -80,13 +86,14 @@ class Course:
     # num_players_code: int
 
     def __init__(self, name, url_to_date, url_after_date_to_players,
-                 outer_wrapper_selector, tee_time_selector, test_path, num_players_code=None):
+                 outer_wrapper_selector, tee_time_selector, test_path, max_advance, num_players_code=None):
         self.name = name
         self.url_to_date = url_to_date
         self.url_after_date_to_players = url_after_date_to_players
         self.outer_wrapper_selector = outer_wrapper_selector
         self.tee_time_selector = tee_time_selector
         self.test_path = test_path
+        self.max_advance = max_advance
         self.num_players_code = num_players_code
 
     # url constructor
@@ -117,7 +124,7 @@ class Booking:
         # self.time_selection = time_selection
         self.date_of_play = date_of_play
         self.course = self.new_course()
-
+        self.tee_times = []
     def new_course(self):
         this_course = next(item for item in courses if item["name"] == self.course_name)
 
@@ -128,6 +135,7 @@ class Booking:
             this_course["outer_wrapper_selector"],
             this_course["tee_time_selector"],
             this_course["test_path"],
+            this_course["max_advance"],
             this_course["num_players_code"]
         )
         return course
@@ -158,8 +166,8 @@ class Booking:
         full_tee_times = soup.select(self.course.outer_wrapper_selector)
         times = []
         for t in full_tee_times:
-            times.append(t.select_one(self.course.tee_time_selector).text)
-        return times
+            self.tee_times.append(t.select_one(self.course.tee_time_selector).text)
+        return self
 
     def test_find_times(self):
 
@@ -197,16 +205,18 @@ class Search:
         return booking.find_times()
 
     def all_times_for_courses_on_dates(self, course_list: [], dates: []):
-        # June 3: Langara(12:10, 12:15, 1:45), Fraserview(8:37, 14:52)
-        # [{dates: [{course: [times]}]}]
-        these_dates = []
+        these_dates_tee_times = []
+        # [{date: [Booking()]}]
         for d in dates:
-            courses = []
-            these_dates.append({d: courses})
+            bookings = []
+            these_dates_tee_times.append({d: bookings})
             for c in course_list:
-                times = self._get_times_for_course(c, d)
-                courses.append({c: times})
-        return these_dates
+                booking = self._get_times_for_course(c, d)
+                bookings.append(booking)
+        return these_dates_tee_times
+
+
+
 
     def course_group_times(self, group: str, dates):
         search_group = course_groups[group]
@@ -218,17 +228,35 @@ class Search:
     def all_courses_times_this_saturday(self):
         return self.all_times_for_courses_on_dates(courses, [self.this_saturday()])
 
+    def get_date_n_days(self, num_days):
+        future_date = date.today() + timedelta(num_days)
+        print(future_date.strftime("%A, %B %d, %Y"))
+        return future_date
+
+    def int_weekday_in_n_days(self, num_days):
+        today = date.today()
+        today_int = datetime.weekday(today)
+        return (today_int + num_days) % 7
+
+    def next_weekday_occurance_after_n_days(self, weekday: str, num_days):
+        day = weekdays.index(weekday)
+        weekday_in_n_days = self.int_weekday_in_n_days(num_days)
+        today = date.today()
+        days_from_n_days = (day - weekday_in_n_days) % 7
+        print(days_from_n_days)
+        return today + timedelta(num_days + days_from_n_days)
+
+    def get_date_to_advance_book(self, weekday, num_days_advance):
+        date_to_book = self.next_weekday_occurance_after_n_days(weekday, num_days_advance)
+        return date_to_book - timedelta(num_days_advance)
+
+    def days_til_next(self, weekday: str):
+        today = date.today()
+        day_int = datetime.weekday(today)
+        return (weekdays.index(weekday) - day_int) % 7
+
     def this_saturday(self):
-        this_saturday = None
-        i = 0
-        while i < 8:
-            today = date.today()
-            current_day: date = today + timedelta(i)
-            if datetime.datetime.weekday(current_day) == 5:
-                this_saturday = current_day
-                break
-            i += 1
-        return this_saturday
+        return date.today() + timedelta(self.days_til_next("Saturday"))
 
     def next_n_saturdays(self, n):
         saturdays = []
@@ -243,62 +271,50 @@ class Search:
 
 # Returns formatted text
 
-# [{'2022-09-11': [{'Langara': ['16:54', '17:03', '17:12', '17:21', '17:30', '17:39', '17:48', '17:57', '18:06', '18:15', '18:24', '18:33', '18:42', '18:51', '19:00', '19:09', '']},
-#                    {'Fraserview': ['17:21', '17:30', '17:57', '18:06', '18:15', '18:24', '18:33', '19:00', '19:09', '']},
-#                    {'McCleery': ['17:12', '17:21', '17:30', '17:39', '17:48', '17:57', '18:06', '18:15', '18:24', '18:33', '18:42', '18:51', '19:00', '19:09', '']}
-#                    ]}]
-#
 class Formatter:
     def __init__(self, search):
         self.results = search
 
     def for_console(self):
-        first_date = self.results[0]
-        print("First date:", first_date)
+        results = self.results
+        for r in results:
+            [this_date] = list(r.keys())
+            print()
+            # Date string to date type
+            date_time = datetime.strptime(this_date, '%Y-%m-%d')
+            print(date_time.strftime("%A, %B %d, %Y"))
+            [these_bookings] = list(r.values())
+            for b in these_bookings:
+                print(b.course_name)
+                print(', '.join(b.tee_times))
+        # print(these_dates)
+        # print(these_bookings)
 
-        iso_date = list(first_date.keys())
-        date_str = iso_date[0]
-        print(date_str)
-        courses = list(first_date.values())
-        print(courses[0][0])
-        key = courses[0][0].keys()
-        print(key)
-        print(courses[0][0].keys())
-
-        # date_key = list(self.results[0].values())
-
-#             time = t.find(class_="timeDiv").find('span').text
-#             location = t.find('p').text
-#             # print(time + " at " + location)
-
-base_path = Path(__file__).parent
-bby_file_path = (base_path / "test_files/bby_mtn.html").resolve()
-langara_file_path = (base_path / "test_files/langara.html").resolve()
 
 search = Search()
-# print(search.course_group_times("city", ["2022-09-05", "2022-09-06"]))
-print(course_groups["city"])
-print(search.this_saturday())
-print(search.next_n_saturdays(5))
-# print(search.course_group_times("city", ["2022-09-11"]))
-result = search.all_times_for_courses_on_dates(["McCleery"], ["2022-09-09", "2022-09-23"])
-format = Formatter(result)
-print(format.for_console())
+search.get_date_n_days(3)
+search.next_weekday_occurance_after_n_days("Monday", 33)
+print(f'this saturday is:',search.this_saturday())
+print(f'days till next Saturday:',search.days_til_next("Saturday"))
+print(f'weekday int in 1 day:', search.int_weekday_in_n_days(1))
+print(f'next Saturday after 30 days:', search.next_weekday_occurance_after_n_days("Saturday", 30))
+print(f'Date to book the next Saturday 30 days out:', search.get_date_to_advance_book("Saturday", 3))
+
+# search = Search()
+# this_search = search.course_group_times("city", ["2022-09-15", "2022-09-16"])
+# format = Formatter(this_search)
+# print(format.for_console())
+
+# for test files of saved source code
+# base_path = Path(__file__).parent
+# bby_file_path = (base_path / "test_files/bby_mtn.html").resolve()
+# langara_file_path = (base_path / "test_files/langara.html").resolve()
+
 
 # book = Booking("Burnaby Mtn", 3, "2022-09-05")
 # print(book.get_url())
 # print(book.test_find_times())
 
-# book = Booking("Langara", 2, "2022-09-05")
-# print(book.get_url())
-# # print(book.test_find_times(langara_file_path))
-# print(book.find_times())
-
-# ---------------IP has been blocked!!!------------------
-# accidentally used van golf tags
-# book = Booking(bby_mtn, 3, "2022-09-02")
-# print(book.get_url())
-# print(book.find_times())
 
 
 # https://www.chronogolf.ca/club/university-golf-club#?date=2022-09-05&course_id=525&nb_holes=18&affiliation_type_ids=2897,2897
@@ -308,10 +324,6 @@ print(format.for_console())
 #   </div>
 # uni = Course("University Golf", "https://www.chronogolf.ca/club/university-golf-club#?date=",
 #     "&course_id=525&nb_holes=18&affiliation_type_ids=", 2897)
-
-# print(bby_mtn.name)
-# print(bby_mtn.url_after_date_to_players)
-# print(bby_mtn.construct_url("2022-09-05", 3))
 
 # print(uni.construct_url("2022-09-05", 3))
 
@@ -328,55 +340,3 @@ print(format.for_console())
 #     return good
 #
 #
-# i = 0
-# while i < 30:
-#     today = date.today()
-#     current_day: date = today + timedelta(i)
-#     if datetime.datetime.weekday(current_day) == 5:
-#         url = "https://secure.west.prophetservices.com/CityofVancouver/Home/nIndex?CourseId=2,1,3&Date=" + str(
-#             current_day) + "&Time=AnyTime&Player=99&Hole=18"
-#         # print(i)
-#         # print(url)
-#         response = requests.get(url)
-#
-#         soup = BeautifulSoup(response.text, "html.parser")
-#
-#         langara = []
-#         fraserview = []
-#         mccleery = []
-#
-#         print(current_day.strftime('%A'))
-#         print(datetime.datetime.weekday(current_day))
-#         print(current_day)
-#
-#         fullTeeTimes = soup.findAll(class_="divBoxText")
-#
-#     # print([t.span.text for t in times])
-#         for t in fullTeeTimes:
-#             time = t.find(class_="timeDiv").find('span').text
-#             location = t.find('p').text
-#             # print(time + " at " + location)
-#             if location == "Langara GC":
-#                 langara.append(time)
-#             elif location == "McCleery GC":
-#                 mccleery.append(time)
-#             elif location == "Fraserview GC":
-#                 fraserview.append(time)
-#         # print(date.today())
-#         print("Langara Times: " + str(len(langara)))
-#
-#         # print([t for t in langara])
-#
-#         print([t for t in good_times(langara)])
-#
-#         print("Fraserview Times: " + str(len(fraserview)))
-#         # print([t for t in fraserview])
-#         print([t for t in good_times(fraserview)])
-#
-#         print("McCleery Times: " + str(len(mccleery)))
-#         # print([t for t in mccleery])
-#         print([t for t in good_times(mccleery)])
-#         print('\n')
-#
-#
-#     i += 1

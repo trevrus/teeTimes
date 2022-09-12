@@ -255,8 +255,11 @@ class Search:
         day_int = datetime.weekday(today)
         return (weekdays.index(weekday) - day_int) % 7
 
+    def this_coming_weekday(self, day: str):
+        return date.today() + timedelta(self.days_til_next(day))
+
     def this_saturday(self):
-        return date.today() + timedelta(self.days_til_next("Saturday"))
+        return self.this_coming_weekday("Saturday")
 
     def next_n_saturdays(self, n):
         saturdays = []
